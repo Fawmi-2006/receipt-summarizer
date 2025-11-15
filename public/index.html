@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReceiptAI - Intelligent Document Processing</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">ReceiptAI</span>
+                    <span class="brand-tagline">Intelligent Document Processing</span>
+                </div>
+            </div>
+            <div class="nav-actions">
+                <div class="status-indicator">
+                    <i class="fas fa-circle"></i>
+                    <span>API Connected</span>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <section class="hero-section">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        AI-Powered Receipt
+                        <span class="title-accent">Analysis</span>
+                    </h1>
+                    <p class="hero-description">
+                        Extract structured data from receipts automatically using advanced computer vision and natural language processing.
+                    </p>
+                    <div class="feature-grid">
+                        <div class="feature-item">
+                            <i class="fas fa-bolt"></i>
+                            <span>Real-time Processing</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Accurate Data Extraction</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>PDF Export</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="upload-section">
+                <div class="section-header">
+                    <h2>Process Receipt</h2>
+                    <p>Upload an image of your receipt for AI analysis</p>
+                </div>
+
+                <div class="upload-container">
+                    <div class="upload-card">
+                        <div class="upload-area" id="uploadArea">
+                            <input type="file" id="receiptInput" accept="image/*" hidden>
+                            <div class="upload-content">
+                                <div class="upload-icon">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                </div>
+                                <div class="upload-text">
+                                    <h3>Upload Receipt Image</h3>
+                                    <p>Drag & drop or click to browse files</p>
+                                    <div class="format-info">
+                                        <span>Supported formats: JPG, PNG, WebP</span>
+                                        <span>Max size: 10MB</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="browse-btn" onclick="document.getElementById('receiptInput').click()">
+                                    Browse Files
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="file-info" id="fileInfo" style="display: none;">
+                            <div class="file-details">
+                                <div class="file-icon">
+                                    <i class="fas fa-file-image"></i>
+                                </div>
+                                <div class="file-meta">
+                                    <span class="file-name" id="fileName"></span>
+                                    <span class="file-size" id="fileSize"></span>
+                                </div>
+                            </div>
+                            <button type="button" class="clear-file" onclick="clearFile()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <button type="button" class="process-btn" id="analyzeBtn" onclick="analyzeReceipt()" disabled>
+                            <i class="fas fa-play"></i>
+                            Process Receipt
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="processing-section" id="loading" style="display: none;">
+                <div class="processing-card">
+                    <div class="processing-header">
+                        <div class="processing-icon">
+                            <i class="fas fa-cog fa-spin"></i>
+                        </div>
+                        <h3>Analyzing Receipt</h3>
+                    </div>
+                    <div class="processing-content">
+                        <p>Extracting data using Gemini AI...</p>
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="processing-steps">
+                            <div class="step active">
+                                <i class="fas fa-check"></i>
+                                <span>Image Uploaded</span>
+                            </div>
+                            <div class="step active">
+                                <i class="fas fa-sync fa-spin"></i>
+                                <span>AI Analysis</span>
+                            </div>
+                            <div class="step">
+                                <i class="fas fa-clock"></i>
+                                <span>Generating Report</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="results-section" id="results" style="display: none;">
+                <div class="results-header">
+                    <div class="results-title">
+                        <h2>Analysis Complete</h2>
+                        <p>Receipt data successfully extracted and structured</p>
+                    </div>
+                    <div class="results-actions">
+                        <button type="button" class="export-btn" id="downloadPdfBtn" onclick="downloadPDF()">
+                            <i class="fas fa-download"></i>
+                            Export PDF
+                        </button>
+                        <button type="button" class="new-analysis-btn" onclick="clearFile()">
+                            <i class="fas fa-plus"></i>
+                            New Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <div class="results-grid">
+                    <div class="preview-panel">
+                        <div class="panel-header">
+                            <h3>Receipt Preview</h3>
+                            <div class="panel-actions">
+                                <button type="button" class="action-btn" onclick="openFullscreen()">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="preview-content">
+                            <img id="receiptImage" src="" alt="Uploaded receipt" class="receipt-preview">
+                        </div>
+                    </div>
+
+                    <div class="data-panel">
+                        <div class="panel-header">
+                            <h3>Extracted Data</h3>
+                            <div class="data-badge">
+                                <i class="fas fa-robot"></i>
+                                AI Generated
+                            </div>
+                        </div>
+                        <div class="data-content">
+                            <pre id="summaryContent" class="data-output"></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="error-section" id="error" style="display: none;">
+                <div class="error-card">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="error-content">
+                        <h3>Processing Error</h3>
+                        <p id="errorMessage"></p>
+                        <button type="button" class="retry-btn" onclick="hideError()">
+                            <i class="fas fa-redo"></i>
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <span>&copy; 2025 ReceiptAI. All rights reserved.</span>
+                    <span class="creator">Created by Fawmi Sharifa</span>
+                </div>
+                <div class="footer-tech">
+                    <span>Powered by Google Gemini AI</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="fullscreenModal" class="fullscreen-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Receipt Preview</h3>
+                <button class="close-btn" onclick="closeFullscreen()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <img id="fullscreenImage" src="" alt="Fullscreen receipt preview">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
