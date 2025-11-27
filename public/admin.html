@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ReceiptAI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">ReceiptAI</span>
+                    <span class="brand-tagline">Admin Panel</span>
+                </div>
+            </div>
+            <div class="nav-actions" id="navActions">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </nav>
+
+        <main class="main-content">
+    <!-- Add this navigation header -->
+    <div class="admin-header-nav">
+        <button class="back-to-app-btn" onclick="adminPanel.goToApp()">
+            <i class="fas fa-arrow-left"></i>
+            Back to App
+        </button>
+        <div class="admin-header-title">
+            <h1>Admin Panel</h1>
+            <p>Manage your ReceiptAI platform</p>
+        </div>
+    </div>
+            <!-- Admin navigation -->
+            <nav class="admin-nav" id="adminNav">
+                <div class="admin-nav-items">
+                    <button class="admin-nav-item active" data-tab="dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </button>
+                    <button class="admin-nav-item" data-tab="users">
+                        <i class="fas fa-users"></i>
+                        Users
+                    </button>
+                    <button class="admin-nav-item" data-tab="analytics">
+                        <i class="fas fa-chart-bar"></i>
+                        Analytics
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Dashboard Tab -->
+            <section class="admin-tab active" id="dashboardTab">
+                <div class="admin-header">
+                    <h1>Admin Dashboard</h1>
+                    <p>Overview of your ReceiptAI platform</p>
+                </div>
+
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be loaded here -->
+                </div>
+
+                <div class="recent-users">
+                    <h2>Recent Users</h2>
+                    <div class="users-table" id="recentUsersTable">
+                        <!-- Recent users will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Tab -->
+            <section class="admin-tab" id="usersTab">
+                <div class="admin-header">
+                    <h1>User Management</h1>
+                    <p>Manage all users on the platform</p>
+                </div>
+
+                <div class="users-controls">
+                    <div class="search-box">
+                        <input type="text" id="userSearch" placeholder="Search users by name or email...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="users-filters">
+                        <select id="roleFilter">
+                            <option value="">All Roles</option>
+                            <option value="user">Users</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                        <select id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="users-table-container">
+                    <table class="admin-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination" id="usersPagination">
+                    <!-- Pagination will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Analytics Tab -->
+            <section class="admin-tab" id="analyticsTab">
+                <div class="admin-header">
+                    <h1>Analytics</h1>
+                    <p>Platform usage and growth metrics</p>
+                </div>
+
+                <div class="analytics-grid" id="analyticsGrid">
+                    <!-- Analytics will be loaded here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>User Details</h3>
+                <button class="close-btn" onclick="closeUserModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="userModalBody">
+                <!-- User details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

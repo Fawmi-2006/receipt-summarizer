@@ -14,7 +14,16 @@ passport.use(new GoogleStrategy({
     let user = await User.findOne({ googleId: profile.id });
     
     if (user) {
-      console.log('Existing Google user found');
+      console.log('Existing Google user found, updating login info');
+      // Update last login and login count without triggering middleware
+      await User.findByIdAndUpdate(user._id, {
+        lastLogin: new Date(),
+        loginCount: (user.loginCount || 0) + 1,
+        updatedAt: new Date()
+      });
+      
+      // Refetch the updated user
+      user = await User.findById(user._id);
       return done(null, user);
     }
     
@@ -23,26 +32,38 @@ passport.use(new GoogleStrategy({
     
     if (user) {
       console.log('Linking Google account to existing user');
-      // Link Google account to existing email account
-      user.googleId = profile.id;
-      if (profile.photos && profile.photos[0]) {
-        user.avatar = profile.photos[0].value;
-      }
-      await user.save();
+      // Link Google account to existing email account without triggering middleware
+      await User.findByIdAndUpdate(user._id, {
+        googleId: profile.id,
+        avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : user.avatar,
+        lastLogin: new Date(),
+        loginCount: (user.loginCount || 0) + 1,
+        updatedAt: new Date()
+      });
+      
+      // Refetch the updated user
+      user = await User.findById(user._id);
       return done(null, user);
     }
     
-    // Create new user - NO PASSWORD for Google OAuth users
+    // Check if this is the admin email
+    const isAdmin = profile.emails[0].value === 'fawmijailabdeen@gmail.com';
+    
+    // Create new user - use create instead of save to avoid middleware
     console.log('Creating new Google OAuth user');
-    user = new User({
+    user = await User.create({
       googleId: profile.id,
       email: profile.emails[0].value,
       name: profile.displayName,
-      avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : null
+      avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : null,
+      role: isAdmin ? 'admin' : 'user',
+      lastLogin: new Date(),
+      loginCount: 1,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     
-    await user.save();
-    console.log('New Google OAuth user created successfully');
+    console.log(`New ${isAdmin ? 'admin' : 'user'} created successfully`);
     done(null, user);
     
   } catch (error) {

@@ -7,6 +7,7 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 const PDFService = require('./services/pdfService');
+const adminRoutes = require('./routes/admin');
 require('dotenv').config();
 
 // Import database and auth
@@ -46,6 +47,7 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+app.use('/api/admin', adminRoutes);
 
 app.use((req, res, next) => {
   if (req.path.includes('auth')) {
@@ -327,6 +329,10 @@ app.get('/api/health', (req, res) => {
         message: 'Server is running',
         timestamp: new Date().toISOString()
     });
+});
+
+app.get('/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
 // Serve the main application
