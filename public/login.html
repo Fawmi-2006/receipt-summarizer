@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ReceiptAI</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="brand-logo">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <h1>Welcome to ReceiptAI</h1>
+                <p>Sign in to start analyzing your receipts</p>
+            </div>
+
+            <div class="auth-forms">
+                <!-- Login Form -->
+                <div class="form-section" id="loginSection">
+                    <form class="auth-form" id="loginForm">
+                        <div class="form-group">
+                            <label for="loginEmail">Email</label>
+                            <input type="email" id="loginEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password</label>
+                            <input type="password" id="loginPassword" name="password" required>
+                        </div>
+                        <button type="submit" class="auth-btn primary">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Sign In
+                        </button>
+                    </form>
+
+                    <div class="auth-divider">
+                        <span>or continue with</span>
+                    </div>
+
+                    <!-- Google Sign In -->
+                    <button class="auth-btn google" id="googleSignIn">
+                        <i class="fab fa-google"></i>
+                        Sign in with Google
+                    </button>
+
+                    <div class="auth-switch">
+                        <p>Don't have an account? <a href="#" id="showRegister">Sign up</a></p>
+                    </div>
+                </div>
+
+                <!-- Register Form -->
+                <div class="form-section" id="registerSection" style="display: none;">
+                    <form class="auth-form" id="registerForm">
+                        <div class="form-group">
+                            <label for="registerName">Full Name</label>
+                            <input type="text" id="registerName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password</label>
+                            <input type="password" id="registerPassword" name="password" required minlength="6">
+                        </div>
+                        <button type="submit" class="auth-btn primary">
+                            <i class="fas fa-user-plus"></i>
+                            Create Account
+                        </button>
+                    </form>
+
+                    <div class="auth-divider">
+                        <span>or continue with</span>
+                    </div>
+
+                    <!-- Google Sign Up -->
+                    <button class="auth-btn google" id="googleSignUp">
+                        <i class="fab fa-google"></i>
+                        Sign up with Google
+                    </button>
+
+                    <div class="auth-switch">
+                        <p>Already have an account? <a href="#" id="showLogin">Sign in</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

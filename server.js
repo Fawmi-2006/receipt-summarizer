@@ -4,17 +4,60 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
 const PDFService = require('./services/pdfService');
 require('dotenv').config();
+
+// Import database and auth
+const connectDB = require('./config/database');
+require('./config/passport');
+
+// Import routes
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Connect to database
+connectDB();
+
+// Middleware
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 app.use('/pdfs', express.static('pdfs'));
+
+// Session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use((req, res, next) => {
+  if (req.path.includes('auth')) {
+    console.log(`[AUTH DEBUG] ${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log(`[AUTH DEBUG] Query:`, req.query);
+    console.log(`[AUTH DEBUG] Body:`, req.body);
+  }
+  next();
+});
+
+// Routes
+app.use('/api/auth', authRoutes);
 
 const directories = ['uploads', 'pdfs'];
 directories.forEach(dir => {
@@ -150,13 +193,18 @@ If any information is not available, use null. Return ONLY the JSON, no other te
     }
 }
 
-app.post('/api/analyze-receipt', upload.single('receipt'), async (req, res) => {
+// Import auth middleware
+const auth = require('./middleware/auth');
+
+
+// Protected routes - require authentication
+app.post('/api/analyze-receipt', auth, upload.single('receipt'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        console.log('Processing receipt:', req.file.filename);
+        console.log('Processing receipt for user:', req.user.email, 'File:', req.file.filename);
 
         const geminiResponse = await analyzeReceiptWithGemini(req.file.path);
         
@@ -200,13 +248,13 @@ app.post('/api/analyze-receipt', upload.single('receipt'), async (req, res) => {
     }
 });
 
-app.post('/api/analyze-multiple-receipts', upload.array('receipts', 10), async (req, res) => {
+app.post('/api/analyze-multiple-receipts', auth, upload.array('receipts', 10), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
         }
 
-        console.log(`Processing ${req.files.length} receipts`);
+        console.log(`Processing ${req.files.length} receipts for user:`, req.user.email);
 
         const analysisResults = [];
         
@@ -272,11 +320,67 @@ app.post('/api/analyze-multiple-receipts', upload.array('receipts', 10), async (
     }
 });
 
+// Public route for checking server status
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: 'Server is running',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Serve the main application
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Serve login page (you might want to create this)
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Handle Google OAuth callback
+app.get('/auth/google/callback', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'oauth-callback.html'));
+});
+
+app.get('/oauth-callback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'oauth-callback.html'));
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Server error:', error);
+  console.error('Error stack:', error.stack);
+  
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    // Only show details in development
+    ...(process.env.NODE_ENV === 'development' && {
+      details: error.message,
+      stack: error.stack
+    })
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Endpoint not found'
+    });
+});
+
+app.use((req, res, next) => {
+  if (req.path.includes('auth')) {
+    console.log(`[AUTH] ${req.method} ${req.path}`);
+  }
+  next();
+});
+
 app.listen(PORT, () => {
     console.log(`Receipt Summarizer server running on http://localhost:${PORT}`);
-    console.log('Upload your receipt images to get started!');
+    console.log('Database connected successfully');
+    console.log('Authentication system ready');
 });
