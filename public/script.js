@@ -1,6 +1,132 @@
 let currentAnalysisResult = null;
 let currentMultipleResults = null;
 
+// Auth-related functions
+function initAuth() {
+    checkAuthState();
+    setupUserProfile();
+}
+
+function checkAuthState() {
+    const token = localStorage.getItem('authToken');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    
+    if (!token || !user) {
+        showLoginPrompt();
+        return false;
+    }
+    
+    showUserProfile(user);
+    return true;
+}
+
+function showLoginPrompt() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+    
+    mainContent.innerHTML = `
+        <section class="login-prompt">
+            <div class="login-prompt-content">
+                <h2>Welcome to ReceiptAI</h2>
+                <p>Please sign in to start analyzing your receipts with AI</p>
+                <a href="/login" class="login-prompt-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In to Continue
+                </a>
+            </div>
+        </section>
+    `;
+    
+    // Hide navbar actions that require auth
+    const navActions = document.querySelector('.nav-actions');
+    if (navActions) {
+        navActions.innerHTML = `
+            <a href="/login" class="auth-btn" style="padding: 0.5rem 1rem; background: var(--primary); color: white; text-decoration: none; border-radius: 6px; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-sign-in-alt"></i>
+                Sign In
+            </a>
+        `;
+    }
+}
+
+function setupUserProfile() {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user) return;
+    
+    const navActions = document.querySelector('.nav-actions');
+    if (navActions) {
+        navActions.innerHTML = `
+            <div class="user-profile" id="userProfile">
+                <div class="user-avatar">
+                    ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}" style="width: 100%; height: 100%; border-radius: 50%;">` : user.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="user-info">
+                    <span class="user-name">${user.name}</span>
+                    <span class="user-email">${user.email}</span>
+                </div>
+                <div class="user-dropdown" id="userDropdown">
+                    <div class="dropdown-item" onclick="handleProfile()">
+                        <i class="fas fa-user"></i>
+                        Profile
+                    </div>
+                    <div class="dropdown-item" onclick="handleSettings()">
+                        <i class="fas fa-cog"></i>
+                        Settings
+                    </div>
+                    <div class="dropdown-item logout" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add dropdown toggle
+        const userProfile = document.getElementById('userProfile');
+        const userDropdown = document.getElementById('userDropdown');
+        
+        if (userProfile && userDropdown) {
+            userProfile.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                userDropdown.classList.remove('show');
+            });
+        }
+    }
+}
+
+function showUserProfile(user) {
+    // Update UI to show user is logged in
+    const statusIndicator = document.querySelector('.status-indicator');
+    if (statusIndicator) {
+        statusIndicator.innerHTML = `
+            <i class="fas fa-circle"></i>
+            <span>Welcome, ${user.name}</span>
+        `;
+    }
+}
+
+function handleProfile() {
+    alert('Profile feature coming soon!');
+}
+
+function handleSettings() {
+    alert('Settings feature coming soon!');
+}
+
+function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+    }
+}
+
+// File handling functions
 document.getElementById('receiptInput').addEventListener('change', function(e) {
     const files = e.target.files;
     if (files.length > 0) {
@@ -26,6 +152,8 @@ function displayFilesInfo(files) {
     const filesList = document.getElementById('filesList');
     const filesContainer = document.getElementById('filesContainer');
     const filesCount = document.getElementById('filesCount');
+    
+    if (!filesList || !filesContainer || !filesCount) return;
     
     filesContainer.innerHTML = '';
     filesCount.textContent = `${files.length} file${files.length > 1 ? 's' : ''}`;
@@ -74,7 +202,8 @@ function removeFile(index) {
 
 function clearFile() {
     document.getElementById('receiptInput').value = '';
-    document.getElementById('filesList').style.display = 'none';
+    const filesList = document.getElementById('filesList');
+    if (filesList) filesList.style.display = 'none';
     document.getElementById('analyzeSingleBtn').disabled = true;
     document.getElementById('analyzeMultipleBtn').disabled = true;
     document.getElementById('receiptImage').src = '';
@@ -115,7 +244,11 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Analysis functions with authentication
 async function analyzeReceipt() {
+    if (!checkAuthState()) return;
+    
+    const token = localStorage.getItem('authToken');
     const fileInput = document.getElementById('receiptInput');
     const files = fileInput.files;
     
@@ -134,6 +267,9 @@ async function analyzeReceipt() {
     try {
         const response = await fetch('/api/analyze-receipt', {
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
             body: formData
         });
 
@@ -153,6 +289,9 @@ async function analyzeReceipt() {
 }
 
 async function analyzeMultipleReceipts() {
+    if (!checkAuthState()) return;
+    
+    const token = localStorage.getItem('authToken');
     const fileInput = document.getElementById('receiptInput');
     const files = fileInput.files;
     
@@ -173,6 +312,9 @@ async function analyzeMultipleReceipts() {
     try {
         const response = await fetch('/api/analyze-multiple-receipts', {
             method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
             body: formData
         });
 
@@ -200,6 +342,8 @@ function displaySingleResult(result) {
     const multipleResults = document.getElementById('multipleResults');
     const downloadPdfBtn = document.getElementById('downloadPdfBtn');
     const downloadCombinedPdfBtn = document.getElementById('downloadCombinedPdfBtn');
+    
+    if (!resultsDiv) return;
     
     resultsTitle.textContent = 'Analysis Complete';
     resultsSubtitle.textContent = 'Receipt data successfully extracted and structured';
@@ -234,6 +378,8 @@ function displayMultipleResults(result) {
     const successfulReceipts = document.getElementById('successfulReceipts');
     const grandTotal = document.getElementById('grandTotal');
     const receiptsGrid = document.getElementById('receiptsGrid');
+    
+    if (!resultsDiv) return;
     
     resultsTitle.textContent = 'Multiple Receipts Analysis Complete';
     resultsSubtitle.textContent = result.message;
@@ -305,22 +451,30 @@ function downloadCombinedPDF() {
 }
 
 function showLoading(title, message) {
-    document.getElementById('processingTitle').textContent = title;
-    document.getElementById('processingMessage').textContent = message;
-    document.getElementById('loading').style.display = 'block';
+    const processingTitle = document.getElementById('processingTitle');
+    const processingMessage = document.getElementById('processingMessage');
+    const loading = document.getElementById('loading');
+    
+    if (processingTitle) processingTitle.textContent = title;
+    if (processingMessage) processingMessage.textContent = message;
+    if (loading) loading.style.display = 'block';
 }
 
 function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
 }
 
 function hideResults() {
-    document.getElementById('results').style.display = 'none';
+    const results = document.getElementById('results');
+    if (results) results.style.display = 'none';
 }
 
 function showError(message) {
     const errorDiv = document.getElementById('error');
     const errorMessage = document.getElementById('errorMessage');
+    
+    if (!errorDiv || !errorMessage) return;
     
     errorMessage.textContent = message;
     errorDiv.style.display = 'block';
@@ -328,44 +482,98 @@ function showError(message) {
 }
 
 function hideError() {
-    document.getElementById('error').style.display = 'none';
+    const errorDiv = document.getElementById('error');
+    if (errorDiv) errorDiv.style.display = 'none';
 }
 
+// Drag and drop functionality
 const uploadArea = document.getElementById('uploadArea');
 
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = 'var(--primary)';
-    uploadArea.style.background = 'rgba(59, 130, 246, 0.1)';
-});
+if (uploadArea) {
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--primary)';
+        uploadArea.style.background = 'rgba(59, 130, 246, 0.1)';
+    });
 
-uploadArea.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = 'var(--border-light)';
-    uploadArea.style.background = 'transparent';
-});
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--border-light)';
+        uploadArea.style.background = 'transparent';
+    });
 
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.style.borderColor = 'var(--border-light)';
-    uploadArea.style.background = 'transparent';
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-        if (imageFiles.length > 0) {
-            const dt = new DataTransfer();
-            imageFiles.forEach(file => dt.items.add(file));
-            document.getElementById('receiptInput').files = dt.files;
-            displayFilesInfo(dt.files);
-            document.getElementById('analyzeSingleBtn').disabled = false;
-            document.getElementById('analyzeMultipleBtn').disabled = false;
-            
-            if (imageFiles.length === 1) {
-                previewImage(imageFiles[0]);
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--border-light)';
+        uploadArea.style.background = 'transparent';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length > 0) {
+                const dt = new DataTransfer();
+                imageFiles.forEach(file => dt.items.add(file));
+                document.getElementById('receiptInput').files = dt.files;
+                displayFilesInfo(dt.files);
+                document.getElementById('analyzeSingleBtn').disabled = false;
+                document.getElementById('analyzeMultipleBtn').disabled = false;
+                
+                if (imageFiles.length === 1) {
+                    previewImage(imageFiles[0]);
+                }
+            } else {
+                showError('Please drop image files only');
             }
-        } else {
-            showError('Please drop image files only');
         }
+    });
+}
+
+// Check for OAuth token in URL (Google login callback)
+function checkOAuthCallback() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    
+    if (token) {
+        localStorage.setItem('authToken', token);
+        // Fetch user profile
+        fetchUserProfile();
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+async function fetchUserProfile() {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            localStorage.setItem('user', JSON.stringify(result.user));
+            window.location.reload(); // Refresh to show authenticated state
+        }
+    } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for OAuth callback first
+    checkOAuthCallback();
+    
+    // Initialize authentication
+    initAuth();
+    
+    // Only initialize file handling if user is authenticated
+    if (checkAuthState()) {
+        // File input event listener is already set up above
+        console.log('ReceiptAI initialized successfully');
     }
 });

@@ -12,10 +12,8 @@ class PDFService {
                 
                 doc.pipe(stream);
                 
-                // Add modern background
                 this.addModernBackground(doc);
                 
-                // Content area with margin
                 const contentX = 40;
                 const contentWidth = doc.page.width - 80;
                 
@@ -45,21 +43,17 @@ class PDFService {
                 
                 doc.pipe(stream);
                 
-                // Add modern background for first page
                 this.addModernBackground(doc);
                 
                 const contentX = 40;
                 const contentWidth = doc.page.width - 80;
                 
-                // Cover page
                 this.addCoverPage(doc, contentX, contentWidth, summaries.length);
                 
-                // Summary dashboard page
                 doc.addPage();
                 this.addModernBackground(doc);
                 this.addSummaryDashboard(doc, contentX, contentWidth, summaries);
                 
-                // Individual receipt pages
                 summaries.forEach((result, index) => {
                     doc.addPage();
                     this.addModernBackground(doc);
@@ -78,7 +72,6 @@ class PDFService {
     }
 
     static addModernBackground(doc) {
-        // Gradient background
         const gradient = doc.linearGradient(0, 0, doc.page.width, doc.page.height);
         gradient.stop(0, '#f8fafc');
         gradient.stop(1, '#f1f5f9');
@@ -86,7 +79,6 @@ class PDFService {
         doc.rect(0, 0, doc.page.width, doc.page.height)
            .fill(gradient);
         
-        // Decorative elements
         doc.fillColor('#e0f2fe');
         doc.circle(doc.page.width - 100, 100, 80).fill();
         doc.circle(50, doc.page.height - 100, 60).fill();
@@ -96,7 +88,6 @@ class PDFService {
     }
 
     static addModernHeader(doc, x, width, title) {
-        // Header background
         doc.fillColor('#ffffff')
            .strokeColor('#e2e8f0')
            .lineWidth(1)
@@ -104,7 +95,6 @@ class PDFService {
            .fill()
            .stroke();
         
-        // Title
         doc.fillColor('#1e40af')
            .fontSize(28)
            .font('Helvetica-Bold')
@@ -113,7 +103,6 @@ class PDFService {
                align: 'center'
            });
         
-        // Accent line
         doc.fillColor('#3b82f6')
            .rect(x + width/2 - 40, 110, 80, 3)
            .fill();
@@ -122,7 +111,6 @@ class PDFService {
     }
 
     static addCoverPage(doc, x, width, receiptCount) {
-        // Main title
         doc.fillColor('#1e40af')
            .fontSize(42)
            .font('Helvetica-Bold')
@@ -139,11 +127,9 @@ class PDFService {
                align: 'center'
            });
         
-        // Statistics circle
         const centerX = doc.page.width / 2;
         const centerY = 400;
         
-        // Outer circle
         doc.fillColor('#ffffff')
            .strokeColor('#3b82f6')
            .lineWidth(3)
@@ -151,12 +137,10 @@ class PDFService {
            .fill()
            .stroke();
         
-        // Inner circle
         doc.fillColor('#3b82f6')
            .circle(centerX, centerY, 60)
            .fill();
         
-        // Count
         doc.fillColor('#ffffff')
            .fontSize(32)
            .font('Helvetica-Bold')
@@ -167,10 +151,8 @@ class PDFService {
            .font('Helvetica')
            .text('Receipts', centerX - 25, centerY + 20);
         
-        // Decorative elements
         this.addFloatingIcons(doc);
         
-        // Footer note
         doc.fillColor('#64748b')
            .fontSize(14)
            .font('Helvetica')
@@ -199,7 +181,6 @@ class PDFService {
             return count + (result.summary.items?.length || 0);
         }, 0);
         
-        // Stats cards
         const stats = [
             {
                 title: 'Total Receipts',
@@ -234,7 +215,6 @@ class PDFService {
         
         doc.y = cardY + 150;
         
-        // Receipts list
         this.addSectionHeader(doc, x, 'RECEIPT BREAKDOWN');
         
         const tableY = doc.y + 10;
@@ -242,12 +222,10 @@ class PDFService {
         
         doc.y = tableY + (summaries.length * 25) + 40;
         
-        // Spending chart visualization
         this.addSpendingChart(doc, x, doc.y, width, 120, summaries);
     }
 
     static addStatCard(doc, x, y, width, height, stat) {
-        // Card background
         doc.fillColor('#ffffff')
            .strokeColor('#e2e8f0')
            .lineWidth(1)
@@ -255,24 +233,20 @@ class PDFService {
            .fill()
            .stroke();
         
-        // Icon
         doc.fillColor(stat.color)
            .fontSize(24)
            .text(stat.icon, x + 20, y + 20);
         
-        // Value
         doc.fillColor('#1e293b')
            .fontSize(20)
            .font('Helvetica-Bold')
            .text(stat.value, x + 60, y + 20);
         
-        // Title
         doc.fillColor('#64748b')
            .fontSize(12)
            .font('Helvetica')
            .text(stat.title, x + 60, y + 45);
         
-        // Subtitle
         doc.fillColor('#94a3b8')
            .fontSize(10)
            .font('Helvetica')
@@ -287,7 +261,6 @@ class PDFService {
             items: width * 0.15
         };
         
-        // Table header
         doc.fillColor('#475569')
            .fontSize(10)
            .font('Helvetica-Bold');
@@ -297,7 +270,6 @@ class PDFService {
         doc.text('TOTAL', x + colWidths.merchant + colWidths.date, y);
         doc.text('ITEMS', x + colWidths.merchant + colWidths.date + colWidths.total, y);
         
-        // Header underline
         doc.strokeColor('#e2e8f0')
            .lineWidth(1)
            .moveTo(x, y + 15)
@@ -313,7 +285,6 @@ class PDFService {
             const total = summary.totals?.total ? `$${parseFloat(summary.totals.total).toFixed(2)}` : '$0.00';
             const itemCount = summary.items?.length || 0;
             
-            // Alternate row background
             if (index % 2 === 0) {
                 doc.fillColor('#f8fafc')
                    .rect(x, currentY - 5, width, 20)
@@ -324,7 +295,6 @@ class PDFService {
                .fontSize(9)
                .font('Helvetica');
             
-            // Merchant name with ellipsis
             doc.text(merchantName, x, currentY, {
                 width: colWidths.merchant - 10,
                 ellipsis: true
@@ -353,7 +323,6 @@ class PDFService {
     static addSpendingChart(doc, x, y, width, height, summaries) {
         this.addSectionHeader(doc, x, 'SPENDING DISTRIBUTION');
         
-        // Chart container
         doc.fillColor('#ffffff')
            .strokeColor('#e2e8f0')
            .lineWidth(1)
@@ -372,12 +341,10 @@ class PDFService {
             const barX = x + 20 + (index * barWidth);
             const barY = y + 30 + chartHeight - barHeight + 20;
             
-            // Bar
             doc.fillColor('#3b82f6')
                .roundedRect(barX, barY, barWidth - 10, barHeight, 4)
                .fill();
             
-            // Amount label
             if (barHeight > 20) {
                 doc.fillColor('#ffffff')
                    .fontSize(8)
@@ -388,7 +355,6 @@ class PDFService {
                    });
             }
             
-            // Merchant initial
             const merchantName = summary.merchant?.name || 'U';
             doc.fillColor('#64748b')
                .fontSize(7)
@@ -407,7 +373,6 @@ class PDFService {
         
         this.addModernHeader(doc, x, width, `RECEIPT #${receiptNumber}`);
         
-        // Receipt card
         doc.fillColor('#ffffff')
            .strokeColor('#e2e8f0')
            .lineWidth(1)
@@ -415,7 +380,6 @@ class PDFService {
            .fill()
            .stroke();
         
-        // Merchant info
         const merchantName = summary.merchant?.name || 'Unknown Merchant';
         const date = summary.transaction?.date || 'Unknown Date';
         const total = summary.totals?.total ? `$${parseFloat(summary.totals.total).toFixed(2)}` : '$0.00';
@@ -437,14 +401,12 @@ class PDFService {
         
         doc.y += 120;
         
-        // Items section
         if (summary.items && summary.items.length > 0) {
             this.addSectionHeader(doc, x, 'PURCHASED ITEMS');
             this.addItemsTableModern(doc, x, doc.y + 10, width, summary.items);
             doc.y += (summary.items.length * 18) + 30;
         }
         
-        // Totals section
         if (summary.totals) {
             this.addSectionHeader(doc, x, 'TRANSACTION TOTALS');
             this.addTotalsModern(doc, x, doc.y + 10, width - 200, 200, summary.totals);
@@ -459,7 +421,6 @@ class PDFService {
             total: width * 0.15
         };
         
-        // Table header
         doc.fillColor('#475569')
            .fontSize(10)
            .font('Helvetica-Bold');
@@ -472,7 +433,6 @@ class PDFService {
         let currentY = y + 20;
         
         items.forEach((item, index) => {
-            // Alternate background
             if (index % 2 === 0) {
                 doc.fillColor('#f8fafc')
                    .rect(x, currentY - 8, width, 18)
@@ -483,25 +443,21 @@ class PDFService {
                .fontSize(9)
                .font('Helvetica');
             
-            // Item name
             doc.text(item.name || 'Unknown Item', x + 10, currentY, {
                 width: colWidths.name - 20,
                 ellipsis: true
             });
             
-            // Quantity
             doc.text(String(item.quantity || 1), x + colWidths.name, currentY, {
                 width: colWidths.quantity,
                 align: 'center'
             });
             
-            // Price
             doc.text(`$${parseFloat(item.price || 0).toFixed(2)}`, x + colWidths.name + colWidths.quantity, currentY, {
                 width: colWidths.price,
                 align: 'right'
             });
             
-            // Total
             doc.text(`$${parseFloat(item.total || 0).toFixed(2)}`, x + colWidths.name + colWidths.quantity + colWidths.price, currentY, {
                 width: colWidths.total - 10,
                 align: 'right'
@@ -538,7 +494,6 @@ class PDFService {
             y += 15;
         }
         
-        // Total line
         doc.strokeColor('#e2e8f0')
            .lineWidth(1)
            .moveTo(startX, y + 5)
@@ -559,7 +514,6 @@ class PDFService {
     }
 
     static addReceiptContent(doc, summary, x, width) {
-        // Add content similar to individual receipt pages but adjusted for single receipt
         doc.fillColor('#ffffff')
            .strokeColor('#e2e8f0')
            .lineWidth(1)
