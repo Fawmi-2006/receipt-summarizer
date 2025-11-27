@@ -1,10 +1,10 @@
 const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const PDFService = require('./services/pdfService');
 require('dotenv').config();
 
 const app = express();
@@ -150,101 +150,6 @@ If any information is not available, use null. Return ONLY the JSON, no other te
     }
 }
 
-function createPDF(summary, filename) {
-    return new Promise((resolve, reject) => {
-        try {
-            const doc = new PDFDocument();
-            const pdfPath = path.join('pdfs', filename);
-            const stream = fs.createWriteStream(pdfPath);
-            
-            doc.pipe(stream);
-
-            doc.fontSize(20).font('Helvetica-Bold').fillColor('#2c3e50').text('Receipt Summary', 100, 100);
-            doc.moveDown();
-            
-            const cleanedSummary = cleanSummary(summary);
-            
-            if (cleanedSummary.merchant && Object.keys(cleanedSummary.merchant).length > 0) {
-                doc.fontSize(16).font('Helvetica-Bold').fillColor('#34495e').text('Merchant Information', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50');
-                
-                if (cleanedSummary.merchant.name) doc.text(`Name: ${cleanedSummary.merchant.name}`);
-                if (cleanedSummary.merchant.address) doc.text(`Address: ${cleanedSummary.merchant.address}`);
-                if (cleanedSummary.merchant.phone) doc.text(`Phone: ${cleanedSummary.merchant.phone}`);
-                doc.moveDown();
-            }
-
-            if (cleanedSummary.transaction && Object.keys(cleanedSummary.transaction).length > 0) {
-                doc.fontSize(16).font('Helvetica-Bold').fillColor('#34495e').text('Transaction Details', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50');
-                
-                if (cleanedSummary.transaction.date) doc.text(`Date: ${cleanedSummary.transaction.date}`);
-                if (cleanedSummary.transaction.time) doc.text(`Time: ${cleanedSummary.transaction.time}`);
-                if (cleanedSummary.transaction.receipt_number) doc.text(`Receipt #: ${cleanedSummary.transaction.receipt_number}`);
-                if (cleanedSummary.transaction.cashier) doc.text(`Cashier: ${cleanedSummary.transaction.cashier}`);
-                doc.moveDown();
-            }
-
-            if (cleanedSummary.items && cleanedSummary.items.length > 0) {
-                doc.fontSize(16).font('Helvetica-Bold').fillColor('#34495e').text('Items Purchased', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50');
-                
-                cleanedSummary.items.forEach((item, index) => {
-                    doc.text(`${index + 1}. ${item.name} - Qty: ${item.quantity} - Price: $${item.price} - Total: $${item.total}`);
-                });
-                doc.moveDown();
-            }
-
-            if (cleanedSummary.totals && Object.keys(cleanedSummary.totals).length > 0) {
-                doc.fontSize(16).font('Helvetica-Bold').fillColor('#34495e').text('Totals', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50');
-                
-                if (cleanedSummary.totals.subtotal) doc.text(`Subtotal: $${cleanedSummary.totals.subtotal}`);
-                if (cleanedSummary.totals.tax_amount) doc.text(`Tax Amount: $${cleanedSummary.totals.tax_amount}`);
-                if (cleanedSummary.totals.tax_rate) doc.text(`Tax Rate: ${cleanedSummary.totals.tax_rate}%`);
-                if (cleanedSummary.totals.discount) doc.text(`Discount: $${cleanedSummary.totals.discount}`);
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#e74c3c');
-                if (cleanedSummary.totals.total) doc.text(`TOTAL: $${cleanedSummary.totals.total}`);
-                doc.moveDown();
-            }
-
-            if (cleanedSummary.payment && Object.keys(cleanedSummary.payment).length > 0) {
-                doc.fontSize(16).font('Helvetica-Bold').fillColor('#34495e').text('Payment', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50');
-                
-                if (cleanedSummary.payment.method) doc.text(`Method: ${cleanedSummary.payment.method}`);
-                if (cleanedSummary.payment.amount_paid) doc.text(`Amount Paid: $${cleanedSummary.payment.amount_paid}`);
-                if (cleanedSummary.payment.change_given) doc.text(`Change Given: $${cleanedSummary.payment.change_given}`);
-            }
-
-            if (cleanedSummary.additional_info) {
-                doc.moveDown();
-                doc.fontSize(14).font('Helvetica-Bold').fillColor('#34495e').text('Additional Information', 100, doc.y);
-                doc.moveDown(0.5);
-                doc.fontSize(12).font('Helvetica').fillColor('#2c3e50').text(cleanedSummary.additional_info);
-            }
-
-            doc.end();
-
-            stream.on('finish', () => {
-                resolve(pdfPath);
-            });
-
-            stream.on('error', (error) => {
-                reject(error);
-            });
-
-        } catch (error) {
-            reject(error);
-        }
-    });
-}
-
 app.post('/api/analyze-receipt', upload.single('receipt'), async (req, res) => {
     try {
         if (!req.file) {
@@ -276,7 +181,7 @@ app.post('/api/analyze-receipt', upload.single('receipt'), async (req, res) => {
         }
 
         const pdfFilename = `receipt-summary-${Date.now()}.pdf`;
-        const pdfPath = await createPDF(summary, pdfFilename);
+        const pdfPath = await PDFService.createReceiptPDF(summary, pdfFilename);
 
         res.json({
             success: true,
@@ -288,6 +193,78 @@ app.post('/api/analyze-receipt', upload.single('receipt'), async (req, res) => {
 
     } catch (error) {
         console.error('Error processing receipt:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.post('/api/analyze-multiple-receipts', upload.array('receipts', 10), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded' });
+        }
+
+        console.log(`Processing ${req.files.length} receipts`);
+
+        const analysisResults = [];
+        
+        for (const file of req.files) {
+            try {
+                console.log('Processing receipt:', file.filename);
+                const geminiResponse = await analyzeReceiptWithGemini(file.path);
+                
+                if (!geminiResponse.candidates || !geminiResponse.candidates[0]) {
+                    throw new Error('Invalid response from Gemini API');
+                }
+
+                const summaryText = geminiResponse.candidates[0].content.parts[0].text;
+                
+                let summary;
+                try {
+                    const cleanedText = summaryText.replace(/```json|```/g, '').trim();
+                    const parsedSummary = JSON.parse(cleanedText);
+                    summary = cleanSummary(parsedSummary);
+                } catch (parseError) {
+                    summary = { 
+                        raw_response: summaryText,
+                        error: "Could not parse AI response as JSON"
+                    };
+                }
+
+                analysisResults.push({
+                    filename: file.filename,
+                    summary: summary,
+                    imageUrl: `/uploads/${file.filename}`
+                });
+
+            } catch (fileError) {
+                console.error(`Error processing file ${file.filename}:`, fileError);
+                analysisResults.push({
+                    filename: file.filename,
+                    error: fileError.message,
+                    imageUrl: `/uploads/${file.filename}`
+                });
+            }
+        }
+
+        const combinedPdfFilename = `combined-receipts-${Date.now()}.pdf`;
+        const successfulAnalyses = analysisResults.filter(result => !result.error);
+        
+        if (successfulAnalyses.length > 0) {
+            await PDFService.createCombinedPDF(successfulAnalyses, combinedPdfFilename);
+        }
+
+        res.json({
+            success: true,
+            results: analysisResults,
+            combinedPdfUrl: successfulAnalyses.length > 0 ? `/pdfs/${combinedPdfFilename}` : null,
+            message: `Processed ${analysisResults.length} receipts, ${successfulAnalyses.length} successful`
+        });
+
+    } catch (error) {
+        console.error('Error processing multiple receipts:', error);
         res.status(500).json({
             success: false,
             error: error.message
