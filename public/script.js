@@ -1,11 +1,16 @@
 let currentAnalysisResult = null;
+let currentMultipleResults = null;
 
 document.getElementById('receiptInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        displayFileInfo(file);
-        previewImage(file);
-        document.getElementById('analyzeBtn').disabled = false;
+    const files = e.target.files;
+    if (files.length > 0) {
+        displayFilesInfo(files);
+        document.getElementById('analyzeSingleBtn').disabled = false;
+        document.getElementById('analyzeMultipleBtn').disabled = false;
+        
+        if (files.length === 1) {
+            previewImage(files[0]);
+        }
     }
 });
 
@@ -17,20 +22,61 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-function displayFileInfo(file) {
-    const fileInfo = document.getElementById('fileInfo');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
+function displayFilesInfo(files) {
+    const filesList = document.getElementById('filesList');
+    const filesContainer = document.getElementById('filesContainer');
+    const filesCount = document.getElementById('filesCount');
     
-    fileName.textContent = file.name;
-    fileSize.textContent = formatFileSize(file.size);
-    fileInfo.style.display = 'flex';
+    filesContainer.innerHTML = '';
+    filesCount.textContent = `${files.length} file${files.length > 1 ? 's' : ''}`;
+    
+    Array.from(files).forEach((file, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <div class="file-details">
+                <div class="file-icon">
+                    <i class="fas fa-file-image"></i>
+                </div>
+                <div class="file-meta">
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                </div>
+            </div>
+            <button type="button" class="clear-file" onclick="removeFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        filesContainer.appendChild(fileItem);
+    });
+    
+    filesList.style.display = 'block';
+}
+
+function removeFile(index) {
+    const input = document.getElementById('receiptInput');
+    const files = Array.from(input.files);
+    files.splice(index, 1);
+    
+    const dt = new DataTransfer();
+    files.forEach(file => dt.items.add(file));
+    input.files = dt.files;
+    
+    if (files.length === 0) {
+        clearFile();
+    } else {
+        displayFilesInfo(input.files);
+        if (files.length === 1) {
+            previewImage(files[0]);
+        }
+    }
 }
 
 function clearFile() {
     document.getElementById('receiptInput').value = '';
-    document.getElementById('fileInfo').style.display = 'none';
-    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('filesList').style.display = 'none';
+    document.getElementById('analyzeSingleBtn').disabled = true;
+    document.getElementById('analyzeMultipleBtn').disabled = true;
     document.getElementById('receiptImage').src = '';
     hideResults();
     hideError();
@@ -71,17 +117,17 @@ document.addEventListener('keydown', function(e) {
 
 async function analyzeReceipt() {
     const fileInput = document.getElementById('receiptInput');
-    const file = fileInput.files[0];
+    const files = fileInput.files;
     
-    if (!file) {
-        showError('Please select a receipt image first');
+    if (!files || files.length === 0) {
+        showError('Please select at least one receipt image');
         return;
     }
 
     const formData = new FormData();
-    formData.append('receipt', file);
+    formData.append('receipt', files[0]);
 
-    showLoading();
+    showLoading('Analyzing Receipt', 'Extracting data using Gemini AI...');
     hideResults();
     hideError();
 
@@ -95,7 +141,7 @@ async function analyzeReceipt() {
 
         if (result.success) {
             currentAnalysisResult = result;
-            displayResults(result);
+            displaySingleResult(result);
         } else {
             showError(result.error || 'Failed to analyze receipt');
         }
@@ -106,9 +152,57 @@ async function analyzeReceipt() {
     }
 }
 
-function displayResults(result) {
+async function analyzeMultipleReceipts() {
+    const fileInput = document.getElementById('receiptInput');
+    const files = fileInput.files;
+    
+    if (!files || files.length === 0) {
+        showError('Please select at least one receipt image');
+        return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('receipts', files[i]);
+    }
+
+    showLoading('Analyzing Multiple Receipts', `Processing ${files.length} receipts using Gemini AI...`);
+    hideResults();
+    hideError();
+
+    try {
+        const response = await fetch('/api/analyze-multiple-receipts', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            currentMultipleResults = result;
+            displayMultipleResults(result);
+        } else {
+            showError(result.error || 'Failed to analyze receipts');
+        }
+    } catch (error) {
+        showError('Network error: ' + error.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+function displaySingleResult(result) {
     const resultsDiv = document.getElementById('results');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const resultsSubtitle = document.getElementById('resultsSubtitle');
     const summaryContent = document.getElementById('summaryContent');
+    const singleResults = document.getElementById('singleResults');
+    const multipleResults = document.getElementById('multipleResults');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    const downloadCombinedPdfBtn = document.getElementById('downloadCombinedPdfBtn');
+    
+    resultsTitle.textContent = 'Analysis Complete';
+    resultsSubtitle.textContent = 'Receipt data successfully extracted and structured';
     
     let formattedSummary;
     if (typeof result.summary === 'object') {
@@ -118,6 +212,81 @@ function displayResults(result) {
     }
     
     summaryContent.textContent = formattedSummary;
+    
+    singleResults.style.display = 'grid';
+    multipleResults.style.display = 'none';
+    downloadPdfBtn.style.display = 'flex';
+    downloadCombinedPdfBtn.style.display = 'none';
+    resultsDiv.style.display = 'block';
+    
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function displayMultipleResults(result) {
+    const resultsDiv = document.getElementById('results');
+    const resultsTitle = document.getElementById('resultsTitle');
+    const resultsSubtitle = document.getElementById('resultsSubtitle');
+    const singleResults = document.getElementById('singleResults');
+    const multipleResults = document.getElementById('multipleResults');
+    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    const downloadCombinedPdfBtn = document.getElementById('downloadCombinedPdfBtn');
+    const totalReceipts = document.getElementById('totalReceipts');
+    const successfulReceipts = document.getElementById('successfulReceipts');
+    const grandTotal = document.getElementById('grandTotal');
+    const receiptsGrid = document.getElementById('receiptsGrid');
+    
+    resultsTitle.textContent = 'Multiple Receipts Analysis Complete';
+    resultsSubtitle.textContent = result.message;
+    
+    const successfulResults = result.results.filter(r => !r.error);
+    const totalAmount = successfulResults.reduce((sum, r) => {
+        return sum + (parseFloat(r.summary.totals?.total) || 0);
+    }, 0);
+    
+    totalReceipts.textContent = result.results.length;
+    successfulReceipts.textContent = successfulResults.length;
+    grandTotal.textContent = `$${totalAmount.toFixed(2)}`;
+    
+    receiptsGrid.innerHTML = '';
+    
+    result.results.forEach((receiptResult, index) => {
+        const receiptCard = document.createElement('div');
+        receiptCard.className = 'receipt-card';
+        
+        let summaryContent;
+        if (receiptResult.error) {
+            summaryContent = `Error: ${receiptResult.error}`;
+        } else if (typeof receiptResult.summary === 'object') {
+            summaryContent = JSON.stringify(receiptResult.summary, null, 2);
+        } else {
+            summaryContent = receiptResult.summary;
+        }
+        
+        const merchantName = receiptResult.summary?.merchant?.name || 'Unknown Merchant';
+        const totalAmount = receiptResult.summary?.totals?.total ? `$${receiptResult.summary.totals.total}` : 'N/A';
+        
+        receiptCard.innerHTML = `
+            <div class="receipt-card-header">
+                <span class="receipt-card-title">Receipt ${index + 1}</span>
+                <span class="receipt-card-total">${totalAmount}</span>
+            </div>
+            <div class="receipt-card-content">
+                <div class="receipt-merchant" style="margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">
+                    ${merchantName}
+                </div>
+                <div class="receipt-card-data">
+                    ${summaryContent}
+                </div>
+            </div>
+        `;
+        
+        receiptsGrid.appendChild(receiptCard);
+    });
+    
+    singleResults.style.display = 'none';
+    multipleResults.style.display = 'block';
+    downloadPdfBtn.style.display = 'none';
+    downloadCombinedPdfBtn.style.display = result.combinedPdfUrl ? 'flex' : 'none';
     resultsDiv.style.display = 'block';
     
     resultsDiv.scrollIntoView({ behavior: 'smooth' });
@@ -129,7 +298,15 @@ function downloadPDF() {
     }
 }
 
-function showLoading() {
+function downloadCombinedPDF() {
+    if (currentMultipleResults && currentMultipleResults.combinedPdfUrl) {
+        window.open(currentMultipleResults.combinedPdfUrl, '_blank');
+    }
+}
+
+function showLoading(title, message) {
+    document.getElementById('processingTitle').textContent = title;
+    document.getElementById('processingMessage').textContent = message;
     document.getElementById('loading').style.display = 'block';
 }
 
@@ -175,14 +352,20 @@ uploadArea.addEventListener('drop', (e) => {
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-        const file = files[0];
-        if (file.type.startsWith('image/')) {
-            document.getElementById('receiptInput').files = files;
-            displayFileInfo(file);
-            previewImage(file);
-            document.getElementById('analyzeBtn').disabled = false;
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+        if (imageFiles.length > 0) {
+            const dt = new DataTransfer();
+            imageFiles.forEach(file => dt.items.add(file));
+            document.getElementById('receiptInput').files = dt.files;
+            displayFilesInfo(dt.files);
+            document.getElementById('analyzeSingleBtn').disabled = false;
+            document.getElementById('analyzeMultipleBtn').disabled = false;
+            
+            if (imageFiles.length === 1) {
+                previewImage(imageFiles[0]);
+            }
         } else {
-            showError('Please drop an image file');
+            showError('Please drop image files only');
         }
     }
 });
