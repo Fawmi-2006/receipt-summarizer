@@ -50,30 +50,35 @@
                             <i class="fas fa-file-pdf"></i>
                             <span>PDF Export</span>
                         </div>
+                        <div class="feature-item">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Multiple Receipts</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <section class="upload-section">
                 <div class="section-header">
-                    <h2>Process Receipt</h2>
-                    <p>Upload an image of your receipt for AI analysis</p>
+                    <h2>Process Receipts</h2>
+                    <p>Upload single or multiple receipt images for AI analysis</p>
                 </div>
 
                 <div class="upload-container">
                     <div class="upload-card">
                         <div class="upload-area" id="uploadArea">
-                            <input type="file" id="receiptInput" accept="image/*" hidden>
+                            <input type="file" id="receiptInput" accept="image/*" multiple hidden>
                             <div class="upload-content">
                                 <div class="upload-icon">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                 </div>
                                 <div class="upload-text">
-                                    <h3>Upload Receipt Image</h3>
-                                    <p>Drag & drop or click to browse files</p>
+                                    <h3>Upload Receipt Images</h3>
+                                    <p>Drag & drop or click to browse files (Multiple files supported)</p>
                                     <div class="format-info">
                                         <span>Supported formats: JPG, PNG, WebP</span>
-                                        <span>Max size: 10MB</span>
+                                        <span>Max size: 10MB per file</span>
+                                        <span>Max files: 10</span>
                                     </div>
                                 </div>
                                 <button type="button" class="browse-btn" onclick="document.getElementById('receiptInput').click()">
@@ -82,25 +87,25 @@
                             </div>
                         </div>
 
-                        <div class="file-info" id="fileInfo" style="display: none;">
-                            <div class="file-details">
-                                <div class="file-icon">
-                                    <i class="fas fa-file-image"></i>
-                                </div>
-                                <div class="file-meta">
-                                    <span class="file-name" id="fileName"></span>
-                                    <span class="file-size" id="fileSize"></span>
-                                </div>
+                        <div class="files-list" id="filesList" style="display: none;">
+                            <div class="files-header">
+                                <h4>Selected Files</h4>
+                                <span class="files-count" id="filesCount"></span>
                             </div>
-                            <button type="button" class="clear-file" onclick="clearFile()">
-                                <i class="fas fa-times"></i>
-                            </button>
+                            <div class="files-container" id="filesContainer">
+                            </div>
                         </div>
 
-                        <button type="button" class="process-btn" id="analyzeBtn" onclick="analyzeReceipt()" disabled>
-                            <i class="fas fa-play"></i>
-                            Process Receipt
-                        </button>
+                        <div class="process-buttons">
+                            <button type="button" class="process-btn single-btn" id="analyzeSingleBtn" onclick="analyzeReceipt()" disabled>
+                                <i class="fas fa-play"></i>
+                                Process Single Receipt
+                            </button>
+                            <button type="button" class="process-btn multiple-btn" id="analyzeMultipleBtn" onclick="analyzeMultipleReceipts()" disabled>
+                                <i class="fas fa-layer-group"></i>
+                                Process All Receipts
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -111,10 +116,10 @@
                         <div class="processing-icon">
                             <i class="fas fa-cog fa-spin"></i>
                         </div>
-                        <h3>Analyzing Receipt</h3>
+                        <h3 id="processingTitle">Analyzing Receipt</h3>
                     </div>
                     <div class="processing-content">
-                        <p>Extracting data using Gemini AI...</p>
+                        <p id="processingMessage">Extracting data using Gemini AI...</p>
                         <div class="progress-bar">
                             <div class="progress-fill"></div>
                         </div>
@@ -139,13 +144,17 @@
             <section class="results-section" id="results" style="display: none;">
                 <div class="results-header">
                     <div class="results-title">
-                        <h2>Analysis Complete</h2>
-                        <p>Receipt data successfully extracted and structured</p>
+                        <h2 id="resultsTitle">Analysis Complete</h2>
+                        <p id="resultsSubtitle">Receipt data successfully extracted and structured</p>
                     </div>
                     <div class="results-actions">
                         <button type="button" class="export-btn" id="downloadPdfBtn" onclick="downloadPDF()">
                             <i class="fas fa-download"></i>
                             Export PDF
+                        </button>
+                        <button type="button" class="export-btn" id="downloadCombinedPdfBtn" onclick="downloadCombinedPDF()" style="display: none;">
+                            <i class="fas fa-download"></i>
+                            Export Combined PDF
                         </button>
                         <button type="button" class="new-analysis-btn" onclick="clearFile()">
                             <i class="fas fa-plus"></i>
@@ -154,7 +163,7 @@
                     </div>
                 </div>
 
-                <div class="results-grid">
+                <div class="results-grid" id="singleResults">
                     <div class="preview-panel">
                         <div class="panel-header">
                             <h3>Receipt Preview</h3>
@@ -180,6 +189,28 @@
                         <div class="data-content">
                             <pre id="summaryContent" class="data-output"></pre>
                         </div>
+                    </div>
+                </div>
+
+                <div class="multiple-results" id="multipleResults" style="display: none;">
+                    <div class="results-overview">
+                        <div class="overview-card">
+                            <div class="overview-item">
+                                <span class="overview-label">Total Receipts</span>
+                                <span class="overview-value" id="totalReceipts">0</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="overview-label">Successful</span>
+                                <span class="overview-value success" id="successfulReceipts">0</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="overview-label">Grand Total</span>
+                                <span class="overview-value total" id="grandTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="receipts-grid" id="receiptsGrid">
                     </div>
                 </div>
             </section>
