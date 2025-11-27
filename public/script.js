@@ -49,22 +49,35 @@ function showLoginPrompt() {
     }
 }
 
+function goToAdminPanel() {
+    window.location.href = '/admin.html';
+}
+
+// Update the setupUserProfile function to use the correct function name
 function setupUserProfile() {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (!user) return;
     
     const navActions = document.querySelector('.nav-actions');
     if (navActions) {
+        const isAdmin = user.role === 'admin';
+        
         navActions.innerHTML = `
             <div class="user-profile" id="userProfile">
                 <div class="user-avatar">
                     ${user.avatar ? `<img src="${user.avatar}" alt="${user.name}" style="width: 100%; height: 100%; border-radius: 50%;">` : user.name.charAt(0).toUpperCase()}
                 </div>
                 <div class="user-info">
-                    <span class="user-name">${user.name}</span>
+                    <span class="user-name">${user.name}${isAdmin ? ' (Admin)' : ''}</span>
                     <span class="user-email">${user.email}</span>
                 </div>
                 <div class="user-dropdown" id="userDropdown">
+                    ${isAdmin ? `
+                        <div class="dropdown-item" onclick="goToAdminPanel()">
+                            <i class="fas fa-cog"></i>
+                            Admin Panel
+                        </div>
+                    ` : ''}
                     <div class="dropdown-item" onclick="handleProfile()">
                         <i class="fas fa-user"></i>
                         Profile
@@ -91,12 +104,16 @@ function setupUserProfile() {
                 userDropdown.classList.toggle('show');
             });
             
-            // Close dropdown when clicking outside
             document.addEventListener('click', () => {
                 userDropdown.classList.remove('show');
             });
         }
     }
+}
+
+// Add this function to navigate to admin panel
+function goToAdminPanel() {
+    window.location.href = '/admin.html';
 }
 
 function showUserProfile(user) {

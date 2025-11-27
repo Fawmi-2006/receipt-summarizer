@@ -10,7 +10,7 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
-// Register with email/password
+// Register with email/password - UPDATED
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -26,13 +26,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    // Create new user
+    // Create new user without password first
     const user = new User({
       email,
-      name
+      name,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
-    // Manually set and hash password
+    // Save user first
+    await user.save();
+
+    // Then set password using our manual method
     await user.setPassword(password);
 
     // Generate token
@@ -45,7 +50,8 @@ router.post('/register', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        avatar: user.avatar
+        avatar: user.avatar,
+        role: user.role
       }
     });
   } catch (error) {
@@ -57,7 +63,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login with email/password - UPDATED
+// Login with email/password
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -84,6 +90,13 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
+    // Update last login without triggering middleware
+    await User.findByIdAndUpdate(user._id, {
+      lastLogin: new Date(),
+      loginCount: (user.loginCount || 0) + 1,
+      updatedAt: new Date()
+    });
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -94,7 +107,8 @@ router.post('/login', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        avatar: user.avatar
+        avatar: user.avatar,
+        role: user.role
       }
     });
   } catch (error) {
@@ -114,7 +128,7 @@ router.get('/google',
   })
 );
 
-// Google OAuth callback - SIMPLIFIED
+// Google OAuth callback
 router.get('/google/callback',
   passport.authenticate('google', { 
     failureRedirect: '/login?error=oauth_failed',
@@ -122,6 +136,11 @@ router.get('/google/callback',
   }),
   (req, res) => {
     try {
+      if (!req.user) {
+        console.error('No user in request after Google OAuth');
+        return res.redirect('/login?error=oauth_failed');
+      }
+
       console.log('Google OAuth callback successful for user:', req.user.email);
       
       // Successful authentication
@@ -148,7 +167,8 @@ router.get('/me', auth, async (req, res) => {
         id: req.user._id,
         email: req.user.email,
         name: req.user.name,
-        avatar: req.user.avatar
+        avatar: req.user.avatar,
+        role: req.user.role
       }
     });
   } catch (error) {
